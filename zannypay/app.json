@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Zannypay",
+    "slug": "zannypay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#5B21B6"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.zannypay.app"
+    },
+    "android": {
+      "package": "com.zannypay.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#5B21B6"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
