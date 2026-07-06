@@ -7,19 +7,19 @@ import { formatCurrency, maskAccount } from '../utils/format';
 import { useWallet } from '../context/WalletContext';
 import TransactionRow from '../components/TransactionRow';
 import Card from '../components/Card';
-import FundModal from '../components/FundModal'; // Newly extracted component
+import FundModal from '../components/FundModal'; 
 
 const QUICK_ACTIONS = [
   { key: 'Transfer', icon: 'swap-horizontal', label: 'Transfer' },
   { key: 'Bills', icon: 'receipt-outline', label: 'Bills' },
-  { key: 'Airtime', icon: 'phone-portrait-outline', label: 'Airtime' },
+  { key: 'Invoice', icon: 'document-text-outline', label: 'Invoice' },
   { key: 'Fund', icon: 'add-circle-outline', label: 'Fund Wallet' },
 ];
 
 export default function DashboardScreen({ navigation }) {
   const { user, balance, transactions, fundWallet } = useWallet();
   const [hidden, setHidden] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false); // Essentialist Toggle State
+  const [isFocusMode, setIsFocusMode] = useState(false); 
   
   const [fundModalVisible, setFundModalVisible] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
@@ -28,7 +28,7 @@ export default function DashboardScreen({ navigation }) {
   const handleQuickAction = (key) => {
     if (key === 'Fund') return setFundModalVisible(true);
     if (key === 'Bills') return navigation.navigate('Bills');
-    if (key === 'Airtime') return navigation.navigate('Bills', { initialCategory: 'airtime' });
+    // Navigation for 'Transfer' and 'Invoice' is handled dynamically here
     navigation.navigate(key);
   };
 
@@ -183,4 +183,3 @@ const styles = StyleSheet.create({
   emptyBtn: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   emptyBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 });
-

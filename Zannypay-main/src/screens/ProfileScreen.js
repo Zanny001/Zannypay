@@ -99,6 +99,14 @@ export default function ProfileScreen() {
             <Text style={styles.menuLabel}>Help & Support Channels</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
           </TouchableOpacity>
+          
+          {/* Integrated Developer Console Menu Item */}
+          <TouchableOpacity style={styles.clickableMenu} onPress={() => navigation.navigate('DeveloperConsole')}>
+            <Ionicons name="terminal-outline" size={20} color={colors.primary} />
+            <Text style={styles.menuLabel}>Developer Console</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+
           <View style={[styles.clickableMenu, { borderBottomWidth: 0 }]}>
             <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
             <Text style={styles.menuLabel}>App Version</Text>
@@ -136,3 +144,4 @@ const styles = StyleSheet.create({
   logoutText: { color: colors.danger, fontWeight: '700', marginLeft: 8 },
   footerText: { textAlign: 'center', color: colors.textMuted, fontSize: 11, marginTop: 16, marginBottom: 40 }
 });
+
