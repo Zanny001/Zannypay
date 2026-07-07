@@ -7,7 +7,8 @@ import { formatCurrency, maskAccount } from '../utils/format';
 import { useWallet } from '../context/WalletContext';
 import TransactionRow from '../components/TransactionRow';
 import Card from '../components/Card';
-import FundModal from '../components/FundModal'; 
+import FundModal from '../components/FundModal';
+import { PaymentService } from '../services/PaymentService'; // Implemented Payment Gateway
 
 const QUICK_ACTIONS = [
   { key: 'Transfer', icon: 'swap-horizontal', label: 'Transfer' },
@@ -19,8 +20,8 @@ const QUICK_ACTIONS = [
 export default function DashboardScreen({ navigation }) {
   const { user, balance, transactions, fundWallet } = useWallet();
   const [hidden, setHidden] = useState(false);
-  const [isFocusMode, setIsFocusMode] = useState(false); 
-  
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
   const [fundModalVisible, setFundModalVisible] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [funding, setFunding] = useState(false);
@@ -28,7 +29,6 @@ export default function DashboardScreen({ navigation }) {
   const handleQuickAction = (key) => {
     if (key === 'Fund') return setFundModalVisible(true);
     if (key === 'Bills') return navigation.navigate('Bills');
-    // Navigation for 'Transfer' and 'Invoice' is handled dynamically here
     navigation.navigate(key);
   };
 
@@ -37,22 +37,37 @@ export default function DashboardScreen({ navigation }) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount to fund.');
       return;
     }
+    
     setFunding(true);
-    const res = await fundWallet(fundAmount);
-    setFunding(false);
-    if (!res.ok) {
-      Alert.alert('Error', res.error);
-      return;
+    
+    try {
+      // 1. Process payment via our Payment Gateway Service
+      const paymentRes = await PaymentService.initializeFunding(
+        parseFloat(fundAmount), 
+        user?.email || 'user@zannypay.com'
+      );
+      
+      // 2. If the gateway clears it, update the local wallet context state
+      if (paymentRes.success) {
+        const res = await fundWallet(fundAmount);
+        if (!res.ok) {
+          Alert.alert('System Error', res.error);
+        } else {
+          setFundModalVisible(false);
+          setFundAmount('');
+          Alert.alert('Funding Successful', paymentRes.message);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Payment Failed', error.message || 'Could not process transaction.');
+    } finally {
+      setFunding(false);
     }
-    setFundModalVisible(false);
-    setFundAmount('');
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        
-        {/* Header with Focus Toggle */}
         <View style={styles.header}>
           <View>
             <Text style={styles.hello}>Hello, {user?.name?.split(' ')[0] || 'there'} 👋</Text>
@@ -62,9 +77,9 @@ export default function DashboardScreen({ navigation }) {
           <View style={styles.headerActions}>
             <View style={styles.focusToggleWrap}>
               <Text style={styles.focusLabel}>Focus</Text>
-              <Switch 
-                value={isFocusMode} 
-                onValueChange={setIsFocusMode} 
+              <Switch
+                value={isFocusMode}
+                onValueChange={setIsFocusMode}
                 trackColor={{ false: '#ddd', true: colors.primary }}
                 thumbColor={'#fff'}
                 style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
@@ -78,7 +93,6 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Balance Card */}
         <LinearGradient colors={gradients.primary} style={styles.balanceCard}>
           <View style={styles.balanceTopRow}>
             <Text style={styles.balanceLabel}>Available Balance</Text>
@@ -95,7 +109,6 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </LinearGradient>
 
-        {/* Conditionally Render Quick Actions based on Focus Mode */}
         {!isFocusMode && (
           <View style={styles.quickActions}>
             {QUICK_ACTIONS.map((action) => (
@@ -140,8 +153,7 @@ export default function DashboardScreen({ navigation }) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Extracted Modal Component */}
-      <FundModal 
+      <FundModal
         visible={fundModalVisible}
         onClose={() => setFundModalVisible(false)}
         amount={fundAmount}
@@ -183,3 +195,4 @@ const styles = StyleSheet.create({
   emptyBtn: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   emptyBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 });
+

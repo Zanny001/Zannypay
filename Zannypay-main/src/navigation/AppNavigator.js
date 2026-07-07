@@ -19,10 +19,11 @@ import TransactionDetailScreen from '../screens/TransactionDetailScreen';
 import SupportScreen from '../screens/SupportScreen';
 import InvoiceScreen from '../screens/InvoiceScreen'; 
 
-// 1. Import the new Elite Modules
+// Elite Modules
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import CardScreen from '../screens/CardScreen';
 import DeveloperConsoleScreen from '../screens/DeveloperConsoleScreen';
+import RewardsScreen from '../screens/RewardsScreen'; // Added Gamification
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -36,11 +37,11 @@ function MainTabs() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: { borderTopWidth: 1, borderTopColor: '#f0f0f0', height: 60, paddingBottom: 8 },
         tabBarIcon: ({ color, size }) => {
-          // Expanded dynamic icon mapping to include the new premium tabs
           const icons = {
             DashboardTab: 'home',
-            Cards: 'card', 
+            Cards: 'card',
             Insights: 'pie-chart',
+            Rewards: 'gift-outline', // Registered Reward Icon
             History: 'time-outline',
             Profile: 'person-outline',
           };
@@ -49,9 +50,9 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="DashboardTab" component={DashboardScreen} options={{ title: 'Home' }} />
-      {/* 2. Seamlessly inject the new Tabs */}
       <Tab.Screen name="Cards" component={CardScreen} options={{ title: 'Cards' }} />
       <Tab.Screen name="Insights" component={AnalyticsScreen} options={{ title: 'Insights' }} />
+      <Tab.Screen name="Rewards" component={RewardsScreen} options={{ title: 'Rewards' }} />
       <Tab.Screen name="History" component={HistoryScreen} options={{ title: 'Activity' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Settings' }} />
     </Tab.Navigator>
@@ -65,10 +66,9 @@ function MainStack() {
       <Stack.Screen name="Transfer" component={TransferScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Bills" component={BillsScreen} options={{ presentation: 'modal' }} />
       <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ presentation: 'modal' }} />
-      
-      {/* 3. Register the Developer Console route as a modal stack */}
+
       <Stack.Screen name="DeveloperConsole" component={DeveloperConsoleScreen} options={{ presentation: 'modal' }} />
-      
+
       <Stack.Screen name="TransactionDetail" component={TransactionDetailScreen} options={{ presentation: 'transparentModal', animation: 'fade_from_bottom' }} />
       <Stack.Screen name="Support" component={SupportScreen} options={{ presentation: 'card', headerShown: true, title: 'Help & Support', headerTintColor: colors.textDark }} />
     </Stack.Navigator>

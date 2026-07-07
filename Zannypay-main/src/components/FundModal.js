@@ -9,7 +9,7 @@ export default function FundModal({ visible, onClose, amount, setAmount, onFund,
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>Fund Wallet</Text>
-          <Text style={styles.modalSubtitle}>Sandbox top-up — no real money is moved.</Text>
+          <Text style={styles.modalSubtitle}>Secured by Global Payment Gateways.</Text>
           <TextInput
             style={styles.modalInput}
             placeholder="Enter amount"
