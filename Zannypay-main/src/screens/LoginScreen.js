@@ -35,7 +35,7 @@ export default function LoginScreen({ navigation }) {
     });
 
     if (result.success) {
-      // In a real app, this would use a securely stored token. 
+      // In a real app, this would use a securely stored token.
       // For now, we simulate a successful biometric bypass if they have an account.
       setPin('0000'); // Triggers the useEffect login
     }
@@ -58,10 +58,10 @@ export default function LoginScreen({ navigation }) {
           setPin('');
         }
       };
-
+      
       triggerLogin();
     }
-  }, [pin]);
+  }, [pin, phone, login]); // <--- UPGRADED: Added missing dependencies
 
   return (
     <SafeAreaView style={styles.container}>
