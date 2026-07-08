@@ -223,17 +223,22 @@ export function WalletProvider({ children }) {
       const amt = Number(amount);
       if (!amt || amt <= 0) return { ok: false, error: 'Enter a valid amount.' };
 
+      // Client-side guard aligned with backend constraints to prevent 400 Bad Request
+      const MAX_FUNDING_LIMIT = 10000000;
+      if (amt > MAX_FUNDING_LIMIT) {
+        return { ok: false, error: 'Watch your spending. Amount cannot be processed online.' };
+      }
+
       const data = await apiPost('/transactions/fund', { amount: amt });
 
-      // Keep temporary status as success in UI state for demo UX purposes 
       const txn = await addTransactionOptimistically({
         type: 'credit',
         category: 'Wallet Funding',
         title: 'Wallet Top-up',
         subtitle: 'Paystack Checkout',
         amount: amt,
-        status: 'success',
-        reference: data.transactionId || data.id
+        status: 'pending', // Accurately reflects pending webhook confirmation
+        reference: data.reference || data.transactionId || data.id
       }, amt);
 
       syncWallet();
