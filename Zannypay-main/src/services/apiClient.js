@@ -3,13 +3,16 @@ import * as SecureStore from 'expo-secure-store';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://zannypay-backend.onrender.com/api/v1';
 
-// Token Management
+// ==========================================
+// TOKEN MANAGEMENT
+// ==========================================
 export const getSavedToken = async () => {
   if (Platform.OS === 'web') return localStorage.getItem('userToken');
   return await SecureStore.getItemAsync('userToken');
 };
 
 export const saveToken = async (token) => {
+  if (!token) return; // Prevent saving empty tokens
   if (Platform.OS === 'web') localStorage.setItem('userToken', token);
   else await SecureStore.setItemAsync('userToken', token);
 };
@@ -19,13 +22,14 @@ export const clearToken = async () => {
   else await SecureStore.deleteItemAsync('userToken');
 };
 
-// USSD Fallback Interceptor
+// ==========================================
+// USSD FALLBACK SYSTEM
+// ==========================================
 const triggerUssdFallback = (fallbackConfig) => {
   if (!fallbackConfig) return;
   const { type, amount, account } = fallbackConfig;
   
   let ussdString = '';
-  // *999* is a generic placeholder. In production, you'd map this to the specific bank code (e.g., *737* for GTB).
   if (type === 'transfer') ussdString = `*999*${amount}*${account}#`; 
   else if (type === 'airtime') ussdString = `*999*${amount}#`;
   else return;
@@ -43,28 +47,44 @@ const triggerUssdFallback = (fallbackConfig) => {
   );
 };
 
-// API Fetch Helpers
+// ==========================================
+// API FETCH HELPERS
+// ==========================================
+const buildHeaders = async () => {
+  const headers = { 'Content-Type': 'application/json' };
+  const savedToken = await getSavedToken();
+  
+  // Guard against the "undefined" or "null" string trap from local storage
+  if (savedToken && savedToken !== 'undefined' && savedToken !== 'null') {
+    headers.Authorization = `Bearer ${savedToken}`;
+  }
+  return headers;
+};
+
 export const apiGet = async (endpoint) => {
   try {
-    const savedToken = await getSavedToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (savedToken) headers.Authorization = `Bearer ${savedToken}`;
+    const headers = await buildHeaders();
+    console.log(`[API GET] Request: ${endpoint}`);
 
     const response = await fetch(`${API_URL}${endpoint}`, { headers });
     const data = await response.json().catch(() => ({}));
+    
+    console.log(`[API GET] Response from ${endpoint}:`, data);
 
-    if (!response.ok) throw new Error(data.message || 'API GET request failed');
+    if (!response.ok) {
+      throw new Error(data.message || data.error || 'API GET request failed');
+    }
     return data;
   } catch (error) {
+    console.error(`[API GET Error] ${endpoint}:`, error.message);
     throw error;
   }
 };
 
 export const apiPost = async (endpoint, payload, fallbackConfig = null) => {
   try {
-    const savedToken = await getSavedToken();
-    const headers = { 'Content-Type': 'application/json' };
-    if (savedToken) headers.Authorization = `Bearer ${savedToken}`;
+    const headers = await buildHeaders();
+    console.log(`[API POST] Request: ${endpoint}`, payload);
 
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
@@ -73,16 +93,21 @@ export const apiPost = async (endpoint, payload, fallbackConfig = null) => {
     });
 
     const data = await response.json().catch(() => ({}));
+    console.log(`[API POST] Response from ${endpoint}:`, data);
 
-    if (!response.ok) throw new Error(data.message || 'API POST request failed');
+    if (!response.ok) {
+      // Prioritize the exact message sent back from NestJS exceptions
+      throw new Error(data.message || data.error || 'API POST request failed');
+    }
     return data;
   } catch (error) {
-    // Intercept network failures (fetch throws TypeError on network drops)
-    if (error.name === 'TypeError' || error.message.includes('Network request failed')) {
+    console.error(`[API POST Error] ${endpoint}:`, error.message);
+    
+    // Intercept genuine network failures (fetch throws TypeError on drops)
+    if (error.name === 'TypeError' || error.message.includes('Network request failed') || error.message.includes('Failed to fetch')) {
       if (fallbackConfig) triggerUssdFallback(fallbackConfig);
       throw new Error('Network offline. Attempting USSD fallback.');
     }
     throw error;
   }
 };
-
