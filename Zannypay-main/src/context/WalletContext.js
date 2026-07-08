@@ -11,7 +11,7 @@ const STORAGE_KEYS = {
   ONBOARDED: 'zannypay:onboarded',
 };
 
-const STARTING_BALANCE = 25000;
+const STARTING_BALANCE = 0; // Aligned with server-side instantiation
 
 export function WalletProvider({ children }) {
   const [loading, setLoading] = useState(true);
@@ -25,15 +25,23 @@ export function WalletProvider({ children }) {
   // Synchronize local state with true backend state
   const syncWallet = useCallback(async () => {
     try {
-      const data = await apiGet('/user/me'); 
-      if (data) {
-        if (data.balance !== undefined) {
-          setBalance(data.balance);
-          await saveJSON(STORAGE_KEYS.BALANCE, data.balance);
+      const data = await apiGet('/user/me');
+      console.log('[Sync Engine] Received true payload:', data);
+
+      if (data && data.user) {
+        // 1. Process nested wallet balance object & convert DB string value to valid JS Number
+        const walletBalance = data.user.wallet?.balance;
+        if (walletBalance !== undefined) {
+          const processedBalance = Number(walletBalance) || 0;
+          setBalance(processedBalance);
+          await saveJSON(STORAGE_KEYS.BALANCE, processedBalance);
         }
-        if (data.transactions) {
-          setTransactions(data.transactions);
-          await saveJSON(STORAGE_KEYS.TXNS, data.transactions);
+
+        // 2. Extract database transactions history array
+        const remoteTxns = data.user.transactions || data.transactions;
+        if (remoteTxns) {
+          setTransactions(remoteTxns);
+          await saveJSON(STORAGE_KEYS.TXNS, remoteTxns);
         }
       }
     } catch (error) {
@@ -53,7 +61,7 @@ export function WalletProvider({ children }) {
         ]);
 
         setUser(savedUser);
-        setBalance(savedBalance);
+        setBalance(Number(savedBalance) || 0);
         setTransactions(savedTxns);
         setOnboarded(savedOnboarded);
 
@@ -106,7 +114,11 @@ export function WalletProvider({ children }) {
       setToken(access_token);
       setUser(loggedInUser);
       setIsAuthenticated(true);
-      await syncWallet();
+      
+      // Delay slightly to give headers/token time to settle into SecureStore
+      setTimeout(() => {
+        syncWallet();
+      }, 300);
 
       return { ok: true };
     } catch (error) {
@@ -118,16 +130,27 @@ export function WalletProvider({ children }) {
     setIsAuthenticated(false);
     setToken(null);
     setUser(null);
+    setBalance(0);
+    setTransactions([]);
     await clearToken();
   }, []);
 
   const addTransactionOptimistically = useCallback(async (txn, amt) => {
-    const entry = { id: Date.now().toString(), date: new Date().toISOString(), ...txn };
+    // Structural optimization: store both `createdAt` and `date` fields to align frontend formatting components
+    const currentIsoString = new Date().toISOString();
+    const entry = { 
+      id: Date.now().toString(), 
+      date: currentIsoString, 
+      createdAt: currentIsoString,
+      ...txn 
+    };
+    
     setTransactions((prev) => {
       const updated = [entry, ...prev];
       saveJSON(STORAGE_KEYS.TXNS, updated);
       return updated;
     });
+    
     setBalance((prev) => {
       const updated = txn.type === 'credit' ? prev + amt : prev - amt;
       saveJSON(STORAGE_KEYS.BALANCE, updated);
@@ -142,11 +165,10 @@ export function WalletProvider({ children }) {
       if (!amt || amt <= 0) return { ok: false, error: 'Enter a valid amount.' };
       if (amt > balance) return { ok: false, error: 'Insufficient balance.' };
 
-      // We pass the USSD fallback config here!
       const data = await apiPost(
-        '/transactions/transfer', 
+        '/transactions/transfer',
         { recipientAccount, amount: amt, pin },
-        { type: 'transfer', amount: amt, account: recipientAccount } // Fallback config
+        { type: 'transfer', amount: amt, account: recipientAccount }
       );
 
       const txn = await addTransactionOptimistically({
@@ -173,9 +195,8 @@ export function WalletProvider({ children }) {
       if (!amt || amt <= 0) return { ok: false, error: 'Enter a valid amount.' };
       if (amt > balance) return { ok: false, error: 'Insufficient balance.' };
 
-      // Passing USSD fallback config for Airtime
       const data = await apiPost(
-        '/transactions/bills', 
+        '/transactions/bills',
         { billerName, category, amount: amt, reference, pin },
         category === 'Airtime' ? { type: 'airtime', amount: amt } : null
       );
@@ -189,7 +210,7 @@ export function WalletProvider({ children }) {
         status: 'success',
         reference: data.transactionId || data.id
       }, amt);
-      
+
       syncWallet();
       return { ok: true, txn };
     } catch (error) {
@@ -204,16 +225,17 @@ export function WalletProvider({ children }) {
 
       const data = await apiPost('/transactions/fund', { amount: amt });
 
+      // Keep temporary status as success in UI state for demo UX purposes 
       const txn = await addTransactionOptimistically({
         type: 'credit',
         category: 'Wallet Funding',
         title: 'Wallet Top-up',
-        subtitle: 'Demo funding (sandbox)',
+        subtitle: 'Paystack Checkout',
         amount: amt,
         status: 'success',
         reference: data.transactionId || data.id
       }, amt);
-      
+
       syncWallet();
       return { ok: true, txn };
     } catch (error) {
