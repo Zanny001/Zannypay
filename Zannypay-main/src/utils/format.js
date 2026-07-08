@@ -7,7 +7,12 @@ export function formatCurrency(amount, currency = '₦') {
 }
 
 export function formatDate(isoString) {
+  if (!isoString) return 'Just now';
   const d = new Date(isoString);
+  
+  // Guard against invalid date objects
+  if (isNaN(d.getTime())) return 'Just now';
+
   return d.toLocaleDateString('en-NG', {
     day: '2-digit',
     month: 'short',

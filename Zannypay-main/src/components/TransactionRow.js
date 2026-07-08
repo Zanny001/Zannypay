@@ -8,6 +8,9 @@ import { formatCurrency, formatDate } from '../utils/format';
 export default function TransactionRow({ txn }) {
   const navigation = useNavigation();
   const isCredit = txn.type === 'credit';
+  
+  // Support both NestJS database keys (createdAt) and local context state keys (date)
+  const transactionTimestamp = txn.createdAt || txn.date;
 
   return (
     <TouchableOpacity 
@@ -25,7 +28,7 @@ export default function TransactionRow({ txn }) {
       <View style={{ flex: 1 }}>
         <Text style={styles.title} numberOfLines={1}>{txn.title}</Text>
         {!!txn.subtitle && <Text style={styles.subtitle} numberOfLines={1}>{txn.subtitle}</Text>}
-        <Text style={styles.date}>{formatDate(txn.date)}</Text>
+        <Text style={styles.date}>{formatDate(transactionTimestamp)}</Text>
       </View>
       <Text style={[styles.amount, { color: isCredit ? colors.success : colors.textDark }]}>
         {isCredit ? '+' : '-'}{formatCurrency(txn.amount)}
