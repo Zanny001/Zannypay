@@ -115,7 +115,6 @@ export function WalletProvider({ children }) {
       setUser(loggedInUser);
       setIsAuthenticated(true);
       
-      // Delay slightly to give headers/token time to settle into SecureStore
       setTimeout(() => {
         syncWallet();
       }, 300);
@@ -136,7 +135,6 @@ export function WalletProvider({ children }) {
   }, []);
 
   const addTransactionOptimistically = useCallback(async (txn, amt) => {
-    // Structural optimization: store both `createdAt` and `date` fields to align frontend formatting components
     const currentIsoString = new Date().toISOString();
     const entry = { 
       id: Date.now().toString(), 
@@ -223,7 +221,6 @@ export function WalletProvider({ children }) {
       const amt = Number(amount);
       if (!amt || amt <= 0) return { ok: false, error: 'Enter a valid amount.' };
 
-      // Client-side guard aligned with backend constraints to prevent 400 Bad Request
       const MAX_FUNDING_LIMIT = 10000000;
       if (amt > MAX_FUNDING_LIMIT) {
         return { ok: false, error: 'Watch your spending. Amount cannot be processed online.' };
@@ -237,12 +234,19 @@ export function WalletProvider({ children }) {
         title: 'Wallet Top-up',
         subtitle: 'Paystack Checkout',
         amount: amt,
-        status: 'pending', // Accurately reflects pending webhook confirmation
+        status: 'pending', 
         reference: data.reference || data.transactionId || data.id
       }, amt);
 
+      // Instantly sync background records
       syncWallet();
-      return { ok: true, txn };
+
+      // Return authorization URL back up so the UI layer can open it cleanly
+      return { 
+        ok: true, 
+        txn, 
+        authorizationUrl: data.authorizationUrl 
+      };
     } catch (error) {
       return { ok: false, error: error.message || 'Wallet funding failed.' };
     }

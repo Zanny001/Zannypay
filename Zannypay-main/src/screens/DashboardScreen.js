@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { gradients, colors } from '../theme/colors';
@@ -8,7 +8,6 @@ import { useWallet } from '../context/WalletContext';
 import TransactionRow from '../components/TransactionRow';
 import Card from '../components/Card';
 import FundModal from '../components/FundModal';
-import { PaymentService } from '../services/PaymentService'; // Implemented Payment Gateway
 
 const QUICK_ACTIONS = [
   { key: 'Transfer', icon: 'swap-horizontal', label: 'Transfer' },
@@ -18,51 +17,15 @@ const QUICK_ACTIONS = [
 ];
 
 export default function DashboardScreen({ navigation }) {
-  const { user, balance, transactions, fundWallet } = useWallet();
+  const { user, balance, transactions } = useWallet();
   const [hidden, setHidden] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
-
   const [fundModalVisible, setFundModalVisible] = useState(false);
-  const [fundAmount, setFundAmount] = useState('');
-  const [funding, setFunding] = useState(false);
 
   const handleQuickAction = (key) => {
     if (key === 'Fund') return setFundModalVisible(true);
     if (key === 'Bills') return navigation.navigate('Bills');
     navigation.navigate(key);
-  };
-
-  const handleConfirmFund = async () => {
-    if (!fundAmount || parseFloat(fundAmount) <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount to fund.');
-      return;
-    }
-    
-    setFunding(true);
-    
-    try {
-      // 1. Process payment via our Payment Gateway Service
-      const paymentRes = await PaymentService.initializeFunding(
-        parseFloat(fundAmount), 
-        user?.email || 'user@zannypay.com'
-      );
-      
-      // 2. If the gateway clears it, update the local wallet context state
-      if (paymentRes.success) {
-        const res = await fundWallet(fundAmount);
-        if (!res.ok) {
-          Alert.alert('System Error', res.error);
-        } else {
-          setFundModalVisible(false);
-          setFundAmount('');
-          Alert.alert('Funding Successful', paymentRes.message);
-        }
-      }
-    } catch (error) {
-      Alert.alert('Payment Failed', error.message || 'Could not process transaction.');
-    } finally {
-      setFunding(false);
-    }
   };
 
   return (
@@ -153,13 +116,10 @@ export default function DashboardScreen({ navigation }) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Simplified Self-Sustaining Modal */}
       <FundModal
         visible={fundModalVisible}
         onClose={() => setFundModalVisible(false)}
-        amount={fundAmount}
-        setAmount={setFundAmount}
-        onFund={handleConfirmFund}
-        loading={funding}
       />
     </SafeAreaView>
   );
@@ -195,4 +155,3 @@ const styles = StyleSheet.create({
   emptyBtn: { backgroundColor: colors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
   emptyBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 });
-
