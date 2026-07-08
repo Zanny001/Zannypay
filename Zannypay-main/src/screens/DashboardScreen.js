@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Switch, RefreshControl } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { gradients, colors } from '../theme/colors';
@@ -17,10 +17,13 @@ const QUICK_ACTIONS = [
 ];
 
 export default function DashboardScreen({ navigation }) {
-  const { user, balance, transactions } = useWallet();
+  const { user, balance, transactions, syncWallet } = useWallet();
   const [hidden, setHidden] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [fundModalVisible, setFundModalVisible] = useState(false);
+  
+  // UPGRADE: Pull-to-refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleQuickAction = (key) => {
     if (key === 'Fund') return setFundModalVisible(true);
@@ -28,9 +31,21 @@ export default function DashboardScreen({ navigation }) {
     navigation.navigate(key);
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await syncWallet();
+    setRefreshing(false);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {/* ScrollView now supports Pull-To-Refresh */}
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
         <View style={styles.header}>
           <View>
             <Text style={styles.hello}>Hello, {user?.name?.split(' ')[0] || 'there'} 👋</Text>
@@ -116,7 +131,6 @@ export default function DashboardScreen({ navigation }) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Simplified Self-Sustaining Modal */}
       <FundModal
         visible={fundModalVisible}
         onClose={() => setFundModalVisible(false)}

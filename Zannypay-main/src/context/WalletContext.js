@@ -36,7 +36,7 @@ export function WalletProvider({ children }) {
           setBalance(processedBalance);
           await saveJSON(STORAGE_KEYS.BALANCE, processedBalance);
         }
-
+        
         // 2. Extract database transactions history array
         const remoteTxns = data.user.transactions || data.transactions;
         if (remoteTxns) {
@@ -110,11 +110,10 @@ export function WalletProvider({ children }) {
 
       await saveToken(access_token);
       await saveJSON(STORAGE_KEYS.USER, loggedInUser);
-
       setToken(access_token);
       setUser(loggedInUser);
       setIsAuthenticated(true);
-      
+
       setTimeout(() => {
         syncWallet();
       }, 300);
@@ -136,24 +135,29 @@ export function WalletProvider({ children }) {
 
   const addTransactionOptimistically = useCallback(async (txn, amt) => {
     const currentIsoString = new Date().toISOString();
-    const entry = { 
-      id: Date.now().toString(), 
-      date: currentIsoString, 
+    const entry = {
+      id: Date.now().toString(),
+      date: currentIsoString,
       createdAt: currentIsoString,
-      ...txn 
+      ...txn
     };
-    
+
     setTransactions((prev) => {
       const updated = [entry, ...prev];
       saveJSON(STORAGE_KEYS.TXNS, updated);
       return updated;
     });
-    
+
     setBalance((prev) => {
+      // UPGRADE: Only update the balance immediately if it is NOT pending.
+      // This prevents the balance jumping up and then immediately reverting on sync.
+      if (txn.status === 'pending') return prev;
+      
       const updated = txn.type === 'credit' ? prev + amt : prev - amt;
       saveJSON(STORAGE_KEYS.BALANCE, updated);
       return updated;
     });
+    
     return entry;
   }, []);
 
@@ -234,7 +238,7 @@ export function WalletProvider({ children }) {
         title: 'Wallet Top-up',
         subtitle: 'Paystack Checkout',
         amount: amt,
-        status: 'pending', 
+        status: 'pending',
         reference: data.reference || data.transactionId || data.id
       }, amt);
 
@@ -242,10 +246,10 @@ export function WalletProvider({ children }) {
       syncWallet();
 
       // Return authorization URL back up so the UI layer can open it cleanly
-      return { 
-        ok: true, 
-        txn, 
-        authorizationUrl: data.authorizationUrl 
+      return {
+        ok: true,
+        txn,
+        authorizationUrl: data.authorizationUrl
       };
     } catch (error) {
       return { ok: false, error: error.message || 'Wallet funding failed.' };
