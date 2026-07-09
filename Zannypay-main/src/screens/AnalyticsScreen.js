@@ -8,11 +8,12 @@ import Card from '../components/Card';
 export default function AnalyticsScreen() {
   const { transactions, balance } = useWallet();
 
-  // Compute category totals dynamically from transaction history
   const categories = (transactions || []).reduce((acc, txn) => {
     const cat = txn.category || 'Other';
     const amt = parseFloat(txn.amount) || 0;
-    acc[cat] = (acc[cat] || 0) + amt;
+    if (amt < 0 || ['Transfer', 'Bills', 'Invoices'].includes(cat)) {
+      acc[cat] = (acc[cat] || 0) + Math.abs(amt);
+    }
     return acc;
   }, { Transfer: 0, Bills: 0, Invoices: 0, Funding: 0 });
 
